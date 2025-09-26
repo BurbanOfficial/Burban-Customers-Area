@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Burban — Espace Client (Redesign)</title>
+  <meta name="description" content="Espace client Burban — minimal, responsive, glass (Apple-like) design. Auth et Firestore intégrés (email/password)." />
+
+  <!-- Fonts -->
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,600,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <!-- Favicon minimal -->
+  <link rel="icon" href="https://i.imgur.com/CCC34mn.png">
+
+  <style>
+  /* ========= Variables ========= */
+  :root{
+    --bg1: linear-gradient(180deg, #162532 0%, #162532);
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent: #8EB1CD;
+    --muted: rgba(255,255,255,0.65);
+    --danger: rgba(179,0,0,0.9);
+    --card-radius: 14px;
+    --max-width: 1100px;
+  }
+
+  /* ========== Reset & base ========== */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: 'Poppins', system-ui, -apple-system, 'Satoshi', 'Helvetica Neue', Arial;
+    background: var(--bg1);
+    color: #fff;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    line-height:1.45;
+  }
+
+  .page-wrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 20px;
+    background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 120px 120px;
+  }
+
+  .frame{
+    width:100%;
+    max-width:var(--max-width);
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:28px;
+    align-items:start;
+  }
+
+  @media (max-width:880px){
+    .frame{grid-template-columns:1fr; padding:12px}
+  }
+
+  .glass{
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--card-radius);
+    padding:18px;
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+  }
+
+  .profile-card{display:flex;flex-direction:column;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand img{width:44px;height:44px;border-radius:9px;object-fit:cover}
+  .brand h1{font-size:18px;margin:0;font-weight:700;letter-spacing:0.4px}
+  .brand p{margin:0;font-size:12px;color:var(--muted)}
+
+  .avatar{width:84px;height:84px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));}
+
+  .profile-top{display:flex;gap:14px;align-items:center}
+  .profile-name{font-size:18px;font-weight:700}
+  .profile-email{font-size:13px;color:var(--muted)}
+  .small-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;font-weight:600;color:var(--accent);cursor:pointer}
+
+  .loyalty{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);}
+  .points{font-weight:700;font-size:20px}
+  .progress-outer{flex:1;margin-left:12px}
+  .progress-bar{height:8px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden}
+  .progress-bar > i{display:block;height:100%;width:48%;background:linear-gradient(90deg,var(--accent), #7fb0c2);border-radius:999px}
+  .markers{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px}
+
+  .content{display:flex;flex-direction:column;gap:18px}
+
+  .tabs{display:flex;gap:10px;flex-wrap:wrap}
+  .tab-btn{padding:10px 14px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-weight:600}
+  .tab-btn[aria-selected="true"]{background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));color:var(--accent);border-color:rgba(144,190,214,0.12)}
+
+  .panel{margin-top:6px}
+  .card{background:transparent;padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+  input,select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:#fff;font-size:15px}
+  input:focus{outline:none;box-shadow:0 6px 18px rgba(0,0,0,0.6);border-color:var(--accent)}
+
+  .row{display:flex;gap:12px}
+  .col{flex:1}
+  @media (max-width:520px){.row{flex-direction:column}}
+
+  .controls{display:flex;gap:12px;flex-wrap:wrap}
+  .controls .btn{padding:10px 14px;border-radius:10px;border: none;background:var(--accent);color:#071016;font-weight:700;cursor:pointer}
+  .btn.ghost{background:#ffffff00;border:1px solid rgba(255, 255, 255, 0.06);border-radius:7px;color:var(--muted)}
+
+  .fav-list{display:grid;gap:10px}
+  .fav-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+  .fav-thumb{width:58px;height:58px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center}
+
+  .meta{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+  .muted{color:var(--muted)}
+  .flex{display:flex;gap:8px;align-items:center}
+
+  .tab-content{margin-top:12px}
+
+  /* AUTH MODAL */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(rgb(22, 37, 50), rgb(22, 37, 50));z-index:9999}
+  .modal.active{display:flex}
+  .modal-card{width:420px;max-width:94%;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255, 255, 255, 0.06);padding:18px}
+  .auth-tabs{display:flex;gap:8px;margin-bottom:12px}
+  .auth-tab{flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid transparent;color:var(--muted);text-align:center;cursor:pointer}
+  .auth-tab.active{background:rgba(255,255,255,0.02);color:var(--accent);border-color:rgba(144,190,214,0.12);font-weight:700}
+  .modal-card input{margin-bottom:10px}
+  .alert{padding:10px;border-radius:8px;background:rgba(179,0,0,0.12);color:#d33333;margin-bottom:12px}
+  .success{padding:10px;border-radius:8px;background:rgba(24,128,64,0.12);color:#2ebd60;margin-bottom:12px}
+
+  .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0}
+
+  .birthday-note{font-size:13px;color:var(--muted);margin-top:6px}
+  .birthday-locked{color:var(--danger);font-size:13px;margin-top:6px}
+
+  /* small helpers */
+  .hidden{display:none}
+  .center{text-align:center}
+
+  /* Country select styled like input */
+.country-select {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #fff;
+  width:100%;
+  font-size:15px;
+  cursor:pointer;
+}
+
+/* phone input small tweak */
+.phone-input {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.6px;
+}
+
+/* Toggle switch (Apple-like pill) */
+.toggle-switch {
+  --w: 56px;
+  --h: 32px;
+  --knob: 26px;
+  display:inline-grid;
+  width:var(--w);
+  height:var(--h);
+  border-radius: 999px;
+  padding: 3px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  position:relative;
+  align-items:center;
+  cursor:pointer;
+  transition: background .22s ease, border-color .22s ease;
+}
+.toggle-switch .track { position:absolute; inset:0; border-radius:999px; }
+.toggle-switch .knob {
+  width:var(--knob); height:var(--knob); border-radius:50%;
+  background:#fff; transform:translateX(0);
+  box-shadow: 0 3px 10px rgba(2,6,23,0.6);
+  transition: transform .22s cubic-bezier(.2,.9,.3,1);
+  position:relative; z-index:2;
+}
+
+/* ON state (green) */
+.toggle-switch.on { background: linear-gradient(90deg, rgba(46,189,96,0.18), rgba(46,189,96,0.08)); border-color: rgba(46,189,96,0.33); }
+.toggle-switch.on .knob { transform: translateX(calc(var(--w) - var(--knob) - 6px)); }
+
+/* OFF state (red) */
+.toggle-switch.off { background: linear-gradient(90deg, rgba(220,80,80,0.12), rgba(220,80,80,0.04)); border-color: rgba(220,80,80,0.22); }
+.toggle-switch.off .knob { transform: translateX(0); }
+
+/* small focus style for accessibility */
+.toggle-switch:focus { outline: 2px solid rgba(144,190,214,0.12); outline-offset:2px; }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <main id="mainFrame" class="frame" role="main" aria-label="Espace client Burban">
+
+      <!-- LEFT column: profile summary -->
+      <aside class="glass profile-card" aria-labelledby="profile-heading">
+        <div class="brand">
+          <img src="https://i.imgur.com/CCC34mn.png" alt="Burban">
+          <div>
+            <h1 id="profile-heading">Burban</h1>
+            <p>Official customer area</p>
+          </div>
+        </div>
+
+        <div class="profile-top">
+          <div class="avatar" id="avatar">RC</div>
+          <div>
+            <div class="profile-name" id="userName">Guest</div>
+            <div class="profile-email" id="userEmail">—</div>
+            <div class="flex" style="margin-top:8px">
+              <button class="small-btn" id="openAuth">Sign in / Sign up</button>
+              <button class="small-btn hidden" id="logoutSmall">Sign out</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="loyalty">
+          <div>
+            <div class="muted">Points</div>
+            <div class="points" id="points">0</div>
+          </div>
+          <div class="progress-outer">
+            <div class="progress-bar" aria-hidden="true"><i id="progressFill" style="width:0%"></i></div>
+            <div class="markers">
+              <span>0</span><span>500</span><span>1000</span><span>2500</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;gap:8px">
+          <div class="muted">Quick actions</div>
+          <div class="controls">
+            <button class="btn" id="toOrders">My orders</button>
+            <button class="btn" id="toFav">Favorites</button>
+            <button class="btn" id="toSupport">Support</button>
+          </div>
+        </div>
+
+        <div class="meta">Account created • <span id="createdAt">—</span></div>
+      </aside>
+
+      <!-- RIGHT column: content panels -->
+      <section class="content">
+
+        <div class="glass">
+          <nav class="tabs" role="tablist" aria-label="Espace client onglets">
+            <button class="tab-btn" role="tab" aria-selected="true" data-panel="profile">Profile</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-panel="security">Security</button>
+            <!-- <button class="tab-btn" role="tab" aria-selected="false" data-panel="favorites">Favorites</button> -->
+            <button class="tab-btn" role="tab" aria-selected="false" data-panel="loyalty">My benefits</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-panel="settings">Preferences</button>
+          </nav>
+
+          <div class="panel" id="panels">
+
+            <!-- PROFILE PANEL -->
+            <div class="card" id="profile" role="tabpanel">
+              <h3 style="margin:0 0 8px">Profile</h3>
+              <form id="profileForm" onsubmit="return false;">
+                <div class="row">
+                  <div class="col">
+                    <label for="firstname">Firstname</label>
+                    <input id="firstname" placeholder="Rémy" />
+                  </div>
+                  <div class="col">
+                    <label for="lastname">Lastname</label>
+                    <input id="lastname" placeholder="Cormon" />
+                  </div>
+                </div>
+                <div style="margin-top:12px">
+                  <label for="emailDisplay">Email</label>
+                  <input id="emailDisplay" type="email" disabled />
+                </div>
+                <div style="margin-top:12px">
+                  <label for="phone">Phone (optional)</label>
+                  <input id="phone" placeholder="+33 6 12 34 56 78" />
+                </div>
+
+                <!-- Birthday field: editable only if not set -->
+                <div style="margin-top:12px">
+                  <label for="profileBirthday">Date of birth (optional)</label>
+                  <input id="profileBirthday" type="date" />
+                  <div id="birthdayNote" class="birthday-note">Add your date of birth to receive a surprise on your special day.</div>
+                </div>
+
+                <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+                  <button class="btn" id="saveProfile">Save changes</button>
+                  <button class="btn ghost" id="downloadData">Download data</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- SECURITY PANEL -->
+            <div class="card" id="security" role="tabpanel" hidden>
+              <h3 style="margin:0 0 8px">Security</h3>
+              <form id="passwordForm" onsubmit="return false;">
+                <label for="newPass">New password</label>
+                <input id="newPass" type="password" autocomplete="new-password" />
+                <label for="confirmPass">Confirm password</label>
+                <input id="confirmPass" type="password" autocomplete="new-password" />
+                <div style="margin-top:12px;display:flex;gap:10px">
+                  <button class="btn" id="updatePassword">Update password</button>
+                  <button class="btn ghost" id="resetPasswordBtn">Reset password (email)</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- FAVORITES PANEL -->
+            <div class="card" id="favorites" role="tabpanel" hidden>
+              <h3 style="margin:0 0 8px">Favorites</h3>
+              <div class="fav-list" id="favList"></div>
+              <div style="margin-top:12px"><button class="btn ghost" id="clearFav">Clear favorites</button></div>
+            </div>
+
+            <!-- LOYALTY PANEL -->
+            <div class="card" id="loyalty" role="tabpanel" hidden>
+              <h3 style="margin:0 0 8px">My Burban Benefits</h3>
+              <p class="muted">Points convert to rewards. €1 = 10 pts.</p>
+              <div style="display:flex;gap:18px;align-items:center;margin-top:12px;flex-wrap:wrap">
+                <div style="min-width:120px;text-align:center">
+                  <div style="font-size:26px;font-weight:800" id="coins">0</div>
+                  <div class="muted">Coins</div>
+                </div>
+                <div style="flex:1">
+                  <div class="progress-bar" aria-hidden><i id="loyaltyFill" style="width:0%"></i></div>
+                  <div class="markers">
+                    <span>0€</span><span>5€</span><span>10€</span><span>20€</span><span>30€</span>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:14px" class="muted" id="nextReward">Next reward at 500 pts</div>
+            </div>
+
+            <!-- SETTINGS PANEL -->
+            <div class="card" id="settings" role="tabpanel" hidden>
+              <h3 style="margin:0 0 8px">Preferences</h3>
+              <label for="lang">Language</label>
+              <select id="lang"><option>FR</option><option>EN</option></select>
+              <label style="margin-top:12px">Email preferences</label>
+
+              <!-- Newsletter preference toggle (requires auth to change) -->
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+                <div style="flex:1">
+                  <div style="font-weight:600">Newsletter</div>
+                  <div class="muted" style="font-size:13px">Recevoir les communications marketing</div>
+                </div>
+                <button id="settingsNewsletterToggle" class="toggle-switch on" aria-pressed="true" title="Newsletter (Preferences)"><span class="track"></span><span class="knob"></span></button>
+              </div>
+
+              <div style="margin-top:14px"><button class="btn ghost" id="deleteAccount">Delete account</button></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="meta">© Burban. All Rights Reserved</div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div class="modal" id="authModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="auth-tabs">
+        <div class="auth-tab active" data-mode="login">Log in</div>
+        <div class="auth-tab" data-mode="register">Sign up</div>
+      </div>
+
+      <div id="authMessages"></div>
+
+      <div id="loginForm">
+        <input id="loginEmail" type="email" placeholder="Email address" />
+        <input id="loginPassword" type="password" placeholder="Password" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="btnLogin">Log in</button>
+          <button class="btn ghost" id="forgotBtn">Forgot?</button>
+        </div>
+      </div>
+
+      <div id="registerForm" class="hidden">
+        <input id="regFirstname" placeholder="Firstname" />
+        <input id="regLastname" placeholder="Lastname" />
+        <input id="regEmail" type="email" placeholder="Email address" />
+        <input id="regPassword" type="password" placeholder="Password (min 6)" />
+        <label for="regBirthday" style="font-size:12px;color:var(--muted);margin-top:6px">Date of birth (optional — used for birthday surprise purposes)</label>
+        <input id="regBirthday" type="date" />
+
+        <!-- Indicatif + numéro -->
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <div style="flex:0 0 120px">
+            <label for="regCountryCode" style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block">Indicatif</label>
+            <select id="regCountryCode" class="country-select" aria-label="Indicatif">
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+39">🇮🇹 +39</option>
+              <option value="+7">🇷🇺 +7</option>
+            </select>
+          </div>
+
+          <div style="flex:1">
+            <label for="regPhone" style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block">Numéro (optionnel)</label>
+            <input id="regPhone" type="tel" class="phone-input" placeholder="6 12 34 56 78" aria-label="Numéro de téléphone (sans l'indicatif)" />
+          </div>
+        </div>
+
+        <!-- Toggle newsletter (registration) -->
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <div style="flex:1">
+            <div style="font-weight:600">Newsletter</div>
+            <div class="muted" style="font-size:13px">Recevoir les communications marketing</div>
+          </div>
+          <button id="regNewsletterToggle" class="toggle-switch on" aria-pressed="true" title="S'inscrire à la newsletter"><span class="track"></span><span class="knob"></span></button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="btnRegister">Create account</button>
+          <button class="btn ghost" id="btnCloseAuth">Close</button>
+        </div>
+      </div>
+
+      <div class="center" style="margin-top:12px;font-size:12px;color:var(--muted)">
+        By creating an account you accept our <button class="link-btn">Terms</button> and <button class="link-btn">Privacy</button>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+  <script>
+  // -------------------- CONFIG --------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDb4AOtRT7jGENnLZ2KNwpczaG2Z77G2rc",
+    authDomain: "burban-fidelity.firebaseapp.com",
+    projectId: "burban-fidelity",
+    storageBucket: "burban-fidelity.firebasestorage.app",
+    messagingSenderId: "830299174800",
+    appId: "1:830299174800:web:f50a4ec419e108f7f16515",
+    measurementId: "G-E4QD4PYLM5"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // -------------------- UI refs --------------------
+  const authModal = document.getElementById('authModal');
+  const openAuth = document.getElementById('openAuth');
+  const logoutSmall = document.getElementById('logoutSmall');
+  const btnLogin = document.getElementById('btnLogin');
+  const btnRegister = document.getElementById('btnRegister');
+  const authMessages = document.getElementById('authMessages');
+  const mainFrame = document.getElementById('mainFrame');
+
+  // profile refs
+  const userName = document.getElementById('userName');
+  const userEmail = document.getElementById('userEmail');
+  const avatar = document.getElementById('avatar');
+  const pointsEl = document.getElementById('points');
+  const progressFill = document.getElementById('progressFill');
+  const coins = document.getElementById('coins');
+  const loyaltyFill = document.getElementById('loyaltyFill');
+  const createdAt = document.getElementById('createdAt');
+
+  // forms
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const regFirstname = document.getElementById('regFirstname');
+  const regLastname = document.getElementById('regLastname');
+  const regEmail = document.getElementById('regEmail');
+  const regPassword = document.getElementById('regPassword');
+  const regBirthday = document.getElementById('regBirthday');
+
+  const firstnameInput = document.getElementById('firstname');
+  const lastnameInput = document.getElementById('lastname');
+  const emailDisplay = document.getElementById('emailDisplay');
+  const phoneInput = document.getElementById('phone');
+  const saveProfile = document.getElementById('saveProfile');
+  const downloadData = document.getElementById('downloadData');
+  const favList = document.getElementById('favList');
+  const clearFav = document.getElementById('clearFav');
+  const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+  const updatePassword = document.getElementById('updatePassword');
+  const profileBirthday = document.getElementById('profileBirthday');
+  const birthdayNote = document.getElementById('birthdayNote');
+
+  // tabs
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('[role="tabpanel"]');
+
+  // ---------- New refs: phone + toggles ----------
+  const regCountryCode = document.getElementById('regCountryCode');
+  const regPhone = document.getElementById('regPhone');
+  const regNewsletterToggle = document.getElementById('regNewsletterToggle');
+  const settingsNewsletterToggle = document.getElementById('settingsNewsletterToggle');
+
+  // auth tabs inside modal
+  document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const mode = tab.dataset.mode;
+      document.getElementById('loginForm').classList.toggle('hidden', mode!=='login');
+      document.getElementById('registerForm').classList.toggle('hidden', mode!=='register');
+      authMessages.innerHTML = '';
+    });
+  });
+
+  // open modal
+  openAuth.addEventListener('click', () => { authModal.classList.add('active'); authModal.setAttribute('aria-hidden','false'); });
+  document.getElementById('btnCloseAuth').addEventListener('click', ()=>{
+    // only allow closing if user is authenticated
+    if(auth.currentUser){ authModal.classList.remove('active'); authModal.setAttribute('aria-hidden','true'); }
+    else{ showMessage('Please sign in to continue.'); }
+  });
+
+  // close modal on backdrop click: only if user authenticated
+  authModal.addEventListener('click', (e)=>{ if(e.target===authModal && auth.currentUser){ authModal.classList.remove('active'); authModal.setAttribute('aria-hidden','true'); }});
+
+  // lightweight tabs
+  function setActive(panelId, btn){ panels.forEach(p=> p.hidden = (p.id !== panelId)); tabBtns.forEach(t=> t.setAttribute('aria-selected', t===btn ? 'true' : 'false')); }
+  tabBtns.forEach(btn => { btn.addEventListener('click', ()=> setActive(btn.dataset.panel, btn)); });
+  setActive('profile', document.querySelector('.tab-btn'));
+
+  // -------------------- Helpers --------------------
+  function showMessage(html, success=false){ authMessages.innerHTML = `<div class="${success? 'success':'alert'}">${html}</div>`; }
+  function clearMessage(){ authMessages.innerHTML=''; }
+  function setAvatarInitials(name){ const parts = (name||'').split(' '); const initials = (parts[0]||'').charAt(0) + ((parts[1]||'').charAt(0)||''); avatar.textContent = (initials||'G').toUpperCase(); }
+
+  // -------------------- Auth actions --------------------
+  btnRegister.addEventListener('click', async ()=>{
+    clearMessage();
+    const first = regFirstname.value.trim();
+    const last = regLastname.value.trim();
+    const email = regEmail.value.trim();
+    const pass = regPassword.value;
+    const birthday = regBirthday.value || '';
+    if(!first || !last || !email || pass.length < 6){ showMessage('Please fill all fields and use a password of at least 6 characters.'); return; }
+    try{
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.sendEmailVerification();
+
+      // create user doc with phone + newsletter from registration toggles/inputs
+      const code = regCountryCode ? regCountryCode.value : '+33';
+      const phoneE164 = (regPhone && regPhone.value) ? buildE164(code, regPhone.value) : '';
+      const newsletterState = regNewsletterToggle ? regNewsletterToggle.classList.contains('on') : true;
+
+      await db.collection('users').doc(cred.user.uid).set({
+        firstname: first,
+        lastname: last,
+        email,
+        phone: phoneE164,
+        birthday: birthday,
+        newsletter: !!newsletterState,
+        favorites: [],
+        points: 200,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Ajout Klaviyo si newsletter activée
+      await updateKlaviyo(email, first, last, !!newsletterState);
+
+      // Important: force sign out so the user must verify email before logging in
+      try { await auth.signOut(); } catch(e){ console.warn('signOut after register failed', e); }
+
+      showMessage('Account created. Verification email sent. Please verify before logging in.', true);
+      // switch to login tab
+      document.querySelector('.auth-tab[data-mode="login"]').click();
+    }catch(err){ console.error(err); showMessage(err.message || 'Registration error'); }
+  });
+
+  btnLogin.addEventListener('click', async ()=>{
+    clearMessage();
+    const email = loginEmail.value.trim();
+    const pass = loginPassword.value;
+    if(!email || !pass){ showMessage('Please enter email and password.'); return; }
+    try{
+      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      // double-check verification status immediately and sign out if not verified
+      await cred.user.reload();
+      if(!cred.user.emailVerified){ await auth.signOut(); showMessage('Please verify your email before logging in.'); return; }
+      // modal will be closed by onAuthStateChanged
+      clearMessage();
+    }catch(err){ console.error(err); showMessage(err.message || 'Login error'); }
+  });
+
+  // forgot password
+  document.getElementById('forgotBtn').addEventListener('click', async ()=>{
+    const email = loginEmail.value.trim() || prompt('Please enter your email for password reset:');
+    if(!email) return;
+    try{ await auth.sendPasswordResetEmail(email); showMessage('Password reset email sent.', true); }catch(err){ showMessage(err.message); }
+  });
+
+  // sign out
+  logoutSmall.addEventListener('click', async ()=>{
+    await auth.signOut();
+    // onAuthStateChanged will re-open auth modal
+  });
+
+  // -------------------- Auth state handling: gate logic --------------------
+  // Ensure the auth modal is shown before content when not authenticated
+  // Start by locking UI until we know the state
+  (function lockUI(){ mainFrame.style.pointerEvents='none'; mainFrame.style.opacity='0.55'; authModal.classList.add('active'); authModal.setAttribute('aria-hidden','false'); })();
+
+  auth.onAuthStateChanged(async (user) => {
+    if(user){
+      // reload user to ensure emailVerified is fresh (important)
+      try { await user.reload(); } catch(e){ console.warn('user.reload failed', e); }
+      // require verified
+      if(!user.emailVerified){
+        showMessage('Please verify your email.');
+        try { await auth.signOut(); } catch(e){ console.warn('signOut in onAuthStateChanged failed', e); }
+        return;
+      }
+      // hide auth modal and unlock main
+      authModal.classList.remove('active'); authModal.setAttribute('aria-hidden','true');
+      mainFrame.style.pointerEvents='auto'; mainFrame.style.opacity='1';
+
+      openAuth.classList.add('hidden'); logoutSmall.classList.remove('hidden');
+      // load profile
+      loadUserProfile(user);
+      loadUserFavorites(user);
+      loadUserAdvantages(user);
+    }else{
+      // no user: show modal and lock main
+      authModal.classList.add('active'); authModal.setAttribute('aria-hidden','false');
+      mainFrame.style.pointerEvents='none'; mainFrame.style.opacity='0.55';
+      openAuth.classList.remove('hidden'); logoutSmall.classList.add('hidden');
+      // clear UI
+      userName.textContent = 'Guest'; userEmail.textContent = '—'; setAvatarInitials('Guest'); pointsEl.textContent='0'; progressFill.style.width='0%'; coins.textContent='0'; loyaltyFill.style.width='0%'; createdAt.textContent='—'; favList.innerHTML='';
+    }
+  });
+
+  // -------------------- Loaders --------------------
+  async function loadUserProfile(user){
+    try{
+      const doc = await db.collection('users').doc(user.uid).get();
+      if(doc.exists){
+        const data = doc.data();
+        userName.textContent = `${data.firstname || ''} ${data.lastname || ''}`.trim() || user.email;
+        userEmail.textContent = data.email || user.email;
+        setAvatarInitials(data.firstname + ' ' + data.lastname);
+        firstnameInput.value = data.firstname || '';
+        lastnameInput.value = data.lastname || '';
+        emailDisplay.value = data.email || user.email;
+        phoneInput.value = data.phone || '';
+
+        // Birthday logic: if a birthday exists -> lock the field and show support note
+        if(data.birthday){
+          profileBirthday.value = data.birthday;
+          profileBirthday.disabled = true;
+          birthdayNote.className = 'birthday-locked';
+          birthdayNote.innerHTML = 'Date of birth recorded. To modify it, contact the support (identity verification required).';
+        } else {
+          profileBirthday.value = '';
+          profileBirthday.disabled = false;
+          birthdayNote.className = 'birthday-note';
+          birthdayNote.textContent = 'Add your date of birth to receive a surprise on your special day.';
+        }
+
+        if(data.createdAt && data.createdAt.toDate) createdAt.textContent = data.createdAt.toDate().toLocaleDateString();
+
+        // apply phone & newsletter UI
+        applyPhoneAndNewsletterToUI(data);
+      }else{
+        // fallback to basic info
+        userName.textContent = user.email.split('@')[0]; userEmail.textContent = user.email; setAvatarInitials(user.email);
+        profileBirthday.value = '';
+        profileBirthday.disabled = false;
+        birthdayNote.className = 'birthday-note';
+        birthdayNote.textContent = 'Add your date of birth to receive a surprise on your special day.';
+      }
+    }catch(err){console.error(err)}
+  }
+
+  async function loadUserFavorites(user){
+    try{
+      const doc = await db.collection('users').doc(user.uid).get();
+      const data = (doc.exists && doc.data()) || {};
+      const favorites = data.favorites || [];
+      favList.innerHTML = '';
+      if(favorites.length===0){ favList.innerHTML = '<div class="muted">No favorites yet</div>'; }
+      else{
+        favorites.forEach(f => {
+          const el = document.createElement('div'); el.className='fav-item'; el.innerHTML = `<div class="fav-thumb">IMG</div><div style="flex:1">${f}</div><div class="muted">—</div>`; favList.appendChild(el);
+        });
+      }
+    }catch(err){console.error(err)}
+  }
+
+async function loadUserAdvantages(user){
+try{
+const doc = await db.collection('users').doc(user.uid).get();
+const pts = (doc.exists && doc.data().points) || 0;
+pointsEl.textContent = pts;
+
+// progress relative to the maximum defined tier (2500 pts -> 30€)
+const percent = Math.min(100, Math.round((pts / 2500) * 100));
+progressFill.style.width = percent + '%';
+coins.textContent = pts;
+loyaltyFill.style.width = percent + '%';
+
+// Paliers de récompense (pts -> libellé)
+const thresholds = [
+{ pts: 500, label: '5€' },
+{ pts: 1000, label: '10€' },
+{ pts: 2000, label: '20€' },
+{ pts: 2500, label: '30€' }
+];
+
+// Cherche le prochain palier supérieur aux points actuels
+const upcoming = thresholds.find(t => pts < t.pts);
+if (upcoming) {
+const missing = upcoming.pts - pts;
+document.getElementById('nextReward').textContent = `Next reward: ${upcoming.label} — You are missing ${missing} pts`;
+} else {
+document.getElementById('nextReward').textContent = 'Congratulations — you have reached the highest tier (€30)!';
+}
+}catch(err){console.error(err)}
+}
+
+  // -------------------- Profile update --------------------
+  saveProfile.addEventListener('click', async ()=>{
+    const user = auth.currentUser; if(!user){ alert('Please sign in first'); return; }
+    const newFirst = firstnameInput.value.trim(); const newLast = lastnameInput.value.trim(); const newPhone = phoneInput.value.trim();
+    const newBirthday = profileBirthday.value;
+    try{
+      const updates = { firstname: newFirst, lastname: newLast, /* phone updated below */ };
+      // Only set birthday if the field is enabled (meaning user had none before) and a value was provided
+      if(!profileBirthday.disabled && newBirthday){ updates.birthday = newBirthday; }
+
+      // apply basic updates
+      await db.collection('users').doc(user.uid).update(updates);
+
+      // save phone + newsletter state
+      await saveProfilePhoneAndNewsletter(user.uid);
+
+      userName.textContent = `${newFirst} ${newLast}`.trim(); setAvatarInitials(newFirst + ' ' + newLast);
+
+      // If we just added a birthday, lock the field and change note
+      if(updates.birthday){
+        profileBirthday.disabled = true;
+        birthdayNote.className = 'birthday-locked';
+        birthdayNote.innerHTML = 'Date de naissance enregistrée. Pour la modifier, contactez <a href="mailto:support@burbanofficial.com">support@burbanofficial.com</a> (vérification d\'identité requise).';
+      }
+
+      alert('Profile updated');
+    }catch(err){ console.error(err); alert('Error: '+err.message); }
+  });
+
+  // download user data (CSV)
+  downloadData.addEventListener('click', async ()=>{
+    const user = auth.currentUser; if(!user){ alert('Please sign in first'); return; }
+    const doc = await db.collection('users').doc(user.uid).get();
+    const data = doc.exists ? doc.data() : {};
+    const csvRows = [ ['field','value'] ];
+    for(const k in data){ csvRows.push([k, JSON.stringify(data[k])]); }
+    const csv = csvRows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'burban_user_data.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  // -------------------- Favorites management --------------------
+  clearFav.addEventListener('click', async ()=>{
+    const user = auth.currentUser; if(!user){ alert('Please sign in first'); return; }
+    if(!confirm('Clear all favorites?')) return;
+    try{ await db.collection('users').doc(user.uid).update({ favorites: [] }); loadUserFavorites(user); }catch(err){console.error(err)}
+  });
+
+  // -------------------- Password & reset --------------------
+  updatePassword.addEventListener('click', async ()=>{
+    const user = auth.currentUser; if(!user){ alert('Please sign in first'); return; }
+    const newP = document.getElementById('newPass').value; const conf = document.getElementById('confirmPass').value;
+    if(!newP || newP !== conf){ alert('Passwords must match'); return; }
+    try{ await user.updatePassword(newP); alert('Password updated'); document.getElementById('passwordForm').reset(); }catch(err){ alert('Error: '+err.message); }
+  });
+
+  resetPasswordBtn.addEventListener('click', async ()=>{
+    const email = auth.currentUser ? auth.currentUser.email : prompt('Enter your email to receive reset.') || '';
+    if(!email) return; try{ await auth.sendPasswordResetEmail(email); alert('Reset email sent'); }catch(err){ alert(err.message); }
+  });
+
+  // -------------------- Delete account (UI-level) --------------------
+  document.getElementById('deleteAccount').addEventListener('click', async ()=>{
+    const user = auth.currentUser; if(!user) { alert('Sign in first'); return; }
+    if(!confirm('Delete your account permanently? This action cannot be undone.')) return;
+    try{
+      // remove user doc then delete auth
+      await db.collection('users').doc(user.uid).delete();
+      await user.delete();
+      alert('Account deleted');
+    }catch(err){ alert('Error: '+err.message); }
+  });
+
+  // small route buttons
+  // redirection document.getElementById('toFav').addEventListener('click', ()=> document.querySelector('[data-panel="favorites"]').click());
+  document.getElementById('toFav').addEventListener('click', ()=> alert('Favorites view — coming soon'));
+  document.getElementById('toSupport').addEventListener('click', ()=> alert('Contact: support@burbanofficial.com'));
+  document.getElementById('toOrders').addEventListener('click', ()=> alert('Orders view — coming soon'));
+
+  // quick demo: add favorite (for testing)
+  function addFavoriteDemo(name){
+    const user = auth.currentUser; if(!user){ alert('Sign in first'); return; }
+    db.collection('users').doc(user.uid).update({ favorites: firebase.firestore.FieldValue.arrayUnion(name) }).then(()=> loadUserFavorites(user));
+  }
+
+  // expose for console debugging
+  window.__burban = { auth, db, addFavoriteDemo };
+
+  /* ---------- Formatage du numéro selon indicatif et toggles ---------- */
+  /* Règles de groupement simples (tu peux étendre la map) */
+  const phoneGrouping = {
+    '+33': [1,2,2,2,2],   // FR -> ex: 6 12 34 56 78
+    '+1': [3,3,4],        // US
+    '+44': [4,3,3],       // UK (simplified)
+    '+49': [3,3,4],
+    '+34': [3,3,3],
+    '+39': [3,3,4],
+    'default': [3,3,3,3]
+  };
+
+  function digitsOnly(s){
+    return (s||'').replace(/\D/g,'');
+  }
+
+  function formatLocalNumber(digits, code){
+    if(!digits) return '';
+    // remove leading 0 for countries that use it (FR)
+    if(code === '+33' && digits.startsWith('0')) digits = digits.slice(1);
+    const groups = phoneGrouping[code] || phoneGrouping['default'];
+    let parts = [], pos=0;
+    for(let g of groups){
+      if(pos >= digits.length) break;
+      parts.push(digits.substr(pos, g));
+      pos += g;
+    }
+    if(pos < digits.length) parts.push(digits.substr(pos));
+    return parts.join(' ');
+  }
+
+  /* sync format when user types in regPhone */
+  regPhone && regPhone.addEventListener('input', (e)=>{
+    const code = (regCountryCode && regCountryCode.value) || '+33';
+    let d = digitsOnly(e.target.value);
+    const formatted = formatLocalNumber(d, code);
+    e.target.value = formatted;
+  });
+
+  /* if user changes country code, update placeholder & reformat */
+  regCountryCode && regCountryCode.addEventListener('change', ()=>{
+    const code = regCountryCode.value;
+    const placeholders = {
+      '+33': '6 12 34 56 78',
+      '+1': '202 555 0143',
+      '+44': '07400 123456',
+      '+49': '015 123 4567',
+      '+34': '612 345 678',
+      '+39': '333 123 4567'
+    };
+    regPhone.placeholder = placeholders[code] || '6 12 34 56 78';
+    const d = digitsOnly(regPhone.value || '');
+    regPhone.value = formatLocalNumber(d, code);
+  });
+
+  /* helper to produce E.164 style string: '+' + country + digits (no spaces) */
+  function buildE164(code, localDigits){
+    const d = digitsOnly(localDigits || '');
+    let normalized = d;
+    if(code === '+33' && normalized.startsWith('0')) normalized = normalized.slice(1);
+    return code + normalized;
+  }
+
+  /* toggle helper */
+  function toggleSwitchElem(btn, toState){
+    if(!btn) return false;
+    const isOn = (toState === undefined) ? btn.classList.contains('on') : toState;
+    btn.classList.toggle('on', isOn);
+    btn.classList.toggle('off', !isOn);
+    btn.setAttribute('aria-pressed', !!isOn);
+    return isOn;
+  }
+
+  /* Registration toggle (works before auth) */
+  if(regNewsletterToggle){
+    toggleSwitchElem(regNewsletterToggle, true); // default ON
+    regNewsletterToggle.addEventListener('click', ()=>{
+      const newState = !regNewsletterToggle.classList.contains('on');
+      toggleSwitchElem(regNewsletterToggle, newState);
+    });
+  }
+
+  /* Settings toggle (requires auth to persist) */
+  if(settingsNewsletterToggle){
+    // default true visually
+    toggleSwitchElem(settingsNewsletterToggle, true);
+
+    settingsNewsletterToggle.addEventListener('click', async ()=>{
+      const user = auth.currentUser;
+      if(!user){ alert('Veuillez vous connecter pour modifier cette préférence.'); return; }
+      // optimistic toggle
+      const prior = settingsNewsletterToggle.classList.contains('on');
+      const newState = !prior;
+      toggleSwitchElem(settingsNewsletterToggle, newState);
+      try{
+        await db.collection('users').doc(user.uid).update({ newsletter: newState });
+        await updateKlaviyo(user.email, data.firstname || "", data.lastname || "", newState);
+      }catch(err){
+        console.error(err);
+        alert('Erreur: ' + err.message);
+        // revert visual state on error
+        toggleSwitchElem(settingsNewsletterToggle, prior);
+      }
+    });
+  }
+
+  /* create user doc helper (used by registration when creating Firestore doc) */
+  async function createUserDocWithExtras(uid, first, last, email, birthday){
+    const code = regCountryCode ? regCountryCode.value : '+33';
+    const phoneE164 = regPhone && regPhone.value ? buildE164(code, regPhone.value) : '';
+    const newsletterState = regNewsletterToggle ? regNewsletterToggle.classList.contains('on') : true;
+    return db.collection('users').doc(uid).set({
+      firstname: first,
+      lastname: last,
+      email,
+      phone: phoneE164,
+      birthday: birthday || '',
+      newsletter: !!newsletterState,
+      favorites: [],
+      points: 200,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  /* apply phone & newsletter UI after loading profile */
+  async function applyPhoneAndNewsletterToUI(data){
+    if(!data) return;
+    if(data.phone){
+      let phoneVal = String(data.phone);
+      const knownCodes = ['+33','+44','+1','+49','+34','+39'];
+      let detected = knownCodes.find(c => phoneVal.startsWith(c)) || '+33';
+      const localDigits = phoneVal.replace(detected, '');
+      if(regCountryCode) regCountryCode.value = detected;
+      const formatted = formatLocalNumber(digitsOnly(localDigits), detected);
+      if(phoneInput) phoneInput.value = formatted;
+      if(regPhone) regPhone.value = formatted;
+    } else {
+      if(phoneInput) phoneInput.value = '';
+      if(regPhone) regPhone.value = '';
+    }
+
+    const nState = (typeof data.newsletter === 'boolean') ? data.newsletter : true;
+    if(settingsNewsletterToggle) toggleSwitchElem(settingsNewsletterToggle, nState);
+    if(regNewsletterToggle) toggleSwitchElem(regNewsletterToggle, nState);
+  }
+
+  /* save phone & newsletter when profile saved */
+  async function saveProfilePhoneAndNewsletter(userId){
+    const code = regCountryCode ? regCountryCode.value : '+33';
+    const local = phoneInput ? phoneInput.value : '';
+    const phoneE164 = local ? buildE164(code, local) : '';
+    const newsletterState = settingsNewsletterToggle ? settingsNewsletterToggle.classList.contains('on') : true;
+    const updates = { phone: phoneE164, newsletter: !!newsletterState };
+    await db.collection('users').doc(userId).update(updates);
+  }
+
+  async function updateKlaviyo(email, firstname, lastname, newsletter) {
+    const endpoint = newsletter 
+      ? "/newsletter/subscribe" 
+      : "/newsletter/unsubscribe";
+  
+    await fetch("https://ton-app.onrender.com" + endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, firstname, lastname })
+    });
+  }
+
+
+  </script>
+</body>
+</html>
