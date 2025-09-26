@@ -910,28 +910,38 @@ document.getElementById('nextReward').textContent = 'Congratulations — you hav
   }
 
   /* Settings toggle (requires auth to persist) */
-  if(settingsNewsletterToggle){
-    // default true visually
-    toggleSwitchElem(settingsNewsletterToggle, true);
+if (settingsNewsletterToggle) {
+  // default visual state handled by applyPhoneAndNewsletterToUI when a user is loaded
+  settingsNewsletterToggle.addEventListener('click', async () => {
+    const user = auth.currentUser;
+    if (!user) { alert('Veuillez vous connecter pour modifier cette préférence.'); return; }
 
-    settingsNewsletterToggle.addEventListener('click', async ()=>{
-      const user = auth.currentUser;
-      if(!user){ alert('Veuillez vous connecter pour modifier cette préférence.'); return; }
-      // optimistic toggle
-      const prior = settingsNewsletterToggle.classList.contains('on');
-      const newState = !prior;
-      toggleSwitchElem(settingsNewsletterToggle, newState);
-      try{
-        await db.collection('users').doc(user.uid).update({ newsletter: newState });
-        await updateKlaviyo(user.email, data.firstname || "", data.lastname || "", newState);
-      }catch(err){
-        console.error(err);
-        alert('Erreur: ' + err.message);
-        // revert visual state on error
-        toggleSwitchElem(settingsNewsletterToggle, prior);
-      }
-    });
-  }
+    // optimistic UI flip
+    const prior = settingsNewsletterToggle.classList.contains('on');
+    const newState = !prior;
+    toggleSwitchElem(settingsNewsletterToggle, newState);
+
+    try {
+      // update Firestore
+      await db.collection('users').doc(user.uid).update({ newsletter: newState });
+
+      // fetch firstname/lastname from Firestore to pass to Klaviyo
+      const doc = await db.collection('users').doc(user.uid).get();
+      const data = doc.exists ? doc.data() : {};
+      const first = data.firstname || '';
+      const last = data.lastname || '';
+
+      // call backend to subscribe/unsubscribe in Klaviyo
+      await updateKlaviyo(user.email, first, last, newState);
+
+    } catch (err) {
+      console.error('Error updating newsletter preference:', err);
+      alert('Erreur lors de la mise à jour : ' + (err.message || err));
+      // revert visual state on error
+      toggleSwitchElem(settingsNewsletterToggle, prior);
+    }
+  });
+}
 
   /* create user doc helper (used by registration when creating Firestore doc) */
   async function createUserDocWithExtras(uid, first, last, email, birthday){
@@ -983,19 +993,37 @@ document.getElementById('nextReward').textContent = 'Congratulations — you hav
     await db.collection('users').doc(userId).update(updates);
   }
 
-  async function updateKlaviyo(email, firstname, lastname, newsletter) {
-    const endpoint = newsletter 
-      ? "/newsletter/subscribe" 
-      : "/newsletter/unsubscribe";
-  
-    await fetch("https://burban-customers-area.onrender.com" + endpoint, {
+  async function updateKlaviyo(email, firstname = "", lastname = "", newsletter = true) {
+  if (!email) return;
+  const endpoint = newsletter ? "/newsletter/subscribe" : "/newsletter/unsubscribe";
+  try {
+    const res = await fetch("https://burban-customers-area.onrender.com" + endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, firstname, lastname })
+      body: JSON.stringify({
+        email,
+        firstname,
+        lastname
+      })
     });
+
+    const text = await res.text();
+    // try parse JSON for nicer logs
+    let parsed;
+    try { parsed = JSON.parse(text); } catch(e) { parsed = text; }
+    console.log('[updateKlaviyo] status', res.status, 'body', parsed);
+
+    if (!res.ok) {
+      // bubble error to caller
+      throw new Error(typeof parsed === 'string' ? parsed : (parsed.error || JSON.stringify(parsed)));
+    }
+    return parsed;
+  } catch (err) {
+    console.error('updateKlaviyo failed:', err);
+    // rethrow so caller can revert UI if needed
+    throw err;
   }
-
-
+}
   </script>
 </body>
 </html>
